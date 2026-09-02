@@ -3,6 +3,30 @@
 // Recibe la cantidad de kilos, calcula el precio de forma segura,
 // y le pide a Mercado Pago que genere un link de pago (preferencia).
 
+// ---- Misma lógica de precios por niveles que usa index.html ----
+// Nivel 1 (1 a 9 kilos): incluye domicilio, alistamiento y almacenamiento.
+// Nivel 2 (10 kilos o más): esos 3 ítems se eliminan (compra por lote grande).
+function calcularPrecio(kilos) {
+  const pulpa = 23000 * kilos;
+  const comisionOrigen = Math.round(pulpa * 0.05);
+  const transporte = 5000 * kilos;
+
+  const esLoteGrande = kilos >= 10;
+  const domicilio = esLoteGrande ? 0 : 13000;
+  const alistamiento = esLoteGrande ? 0 : 1700;
+  const almacenamiento = esLoteGrande ? 0 : 1350;
+
+  const subtotal = pulpa + comisionOrigen + transporte + domicilio + alistamiento + almacenamiento;
+  const comisionTransferencia = Math.round(subtotal * 0.0329 + 800);
+  const total = subtotal + comisionTransferencia;
+
+  return {
+    pulpa, comisionOrigen, transporte,
+    domicilio, alistamiento, almacenamiento,
+    comisionTransferencia, total, esLoteGrande,
+  };
+}
+
 exports.handler = async function (event) {
   // Solo aceptamos peticiones POST
   if (event.httpMethod !== 'POST') {
@@ -14,7 +38,7 @@ exports.handler = async function (event) {
     const kilos = parseInt(body.kilos, 10);
 
     // Validamos la cantidad (nunca confíes en datos que vienen del navegador)
-    if (!kilos || kilos < 1 || kilos > 20) {
+    if (!kilos || kilos < 1 || kilos > 400) {
       return {
         statusCode: 400,
         body: JSON.stringify({ error: 'Cantidad de kilos inválida' }),
@@ -22,13 +46,9 @@ exports.handler = async function (event) {
     }
 
     // ---- Precio calculado aquí en el servidor, no en el navegador ----
-    const PULPA = 23000;
-    const TRANSPORTE = 5000;
-    const DOMICILIO = 3500;
-    const COMISION = 0.05;
-
-    const subtotal = (PULPA + TRANSPORTE + DOMICILIO) * kilos;
-    const total = Math.round(subtotal * (1 + COMISION));
+    // Debe ser exactamente la misma fórmula que usa el index.html,
+    // para que lo que ve el cliente coincida con lo que se le cobra.
+    const total = calcularPrecio(kilos).total;
 
     // ---- Armamos la preferencia de pago para Mercado Pago ----
     const preference = {
