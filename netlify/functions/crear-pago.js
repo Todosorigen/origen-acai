@@ -36,12 +36,24 @@ exports.handler = async function (event) {
   try {
     const body = JSON.parse(event.body || '{}');
     const kilos = parseInt(body.kilos, 10);
+    const nombre    = (body.nombre    || '').toString().trim().slice(0, 120);
+    const telefono  = (body.telefono  || '').toString().trim().slice(0, 40);
+    const direccion = (body.direccion || '').toString().trim().slice(0, 200);
+    const nota      = (body.nota      || '').toString().trim().slice(0, 200);
 
     // Validamos la cantidad (nunca confíes en datos que vienen del navegador)
     if (!kilos || kilos < 1 || kilos > 400) {
       return {
         statusCode: 400,
         body: JSON.stringify({ error: 'Cantidad de kilos inválida' }),
+      };
+    }
+
+    // Validamos los datos de entrega
+    if (!nombre || !telefono || !direccion) {
+      return {
+        statusCode: 400,
+        body: JSON.stringify({ error: 'Faltan datos de entrega (nombre, teléfono o dirección)' }),
       };
     }
 
@@ -54,18 +66,32 @@ exports.handler = async function (event) {
     const preference = {
       items: [
         {
-          title: `${kilos} ${kilos === 1 ? 'kilo' : 'kilos'} de açaí — Origen`,
+          title: `${kilos} ${kilos === 1 ? 'kilo' : 'kilos'} de açaí — Todos Origen`,
           quantity: 1,
           unit_price: total,
           currency_id: 'COP',
         },
       ],
+      payer: {
+        name: nombre,
+        phone: { number: telefono },
+      },
+      // Los datos de entrega quedan guardados en el pago dentro de Mercado Pago,
+      // visibles en el detalle de la transacción.
+      metadata: {
+        kilos: kilos,
+        nombre: nombre,
+        telefono: telefono,
+        direccion: direccion,
+        nota: nota,
+      },
       back_urls: {
         success: 'https://todosorigen.co/?estado=aprobado',
         failure: 'https://todosorigen.co/?estado=fallido',
         pending: 'https://todosorigen.co/?estado=pendiente',
       },
       auto_return: 'approved',
+      notification_url: 'https://todosorigen.co/.netlify/functions/webhook-mercadopago',
     };
 
     const response = await fetch('https://api.mercadopago.com/checkout/preferences', {
