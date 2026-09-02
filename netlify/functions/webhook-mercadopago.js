@@ -58,6 +58,24 @@ exports.handler = async function (event) {
     await vaca.set('personas', String(actualPersonas + 1));
     await procesados.set(String(paymentId), '1');
 
+    // Guardamos el pedido completo (con dirección) para que puedas
+    // consultarlo y despacharlo, ya que Mercado Pago no muestra la
+    // dirección en su panel visual.
+    const meta = payment.metadata || {};
+    const pedido = {
+      id: String(paymentId),
+      fecha: new Date().toISOString(),
+      kilos: kilos,
+      nombre: meta.nombre || (payment.payer && payment.payer.first_name) || '',
+      telefono: meta.telefono || '',
+      direccion: meta.direccion || '',
+      nota: meta.nota || '',
+      total: payment.transaction_amount || null,
+    };
+
+    const pedidos = getStore('pedidos-origen');
+    await pedidos.setJSON(String(paymentId), pedido);
+
     return { statusCode: 200, body: 'ok' };
   } catch (err) {
     // Siempre respondemos 200: si le devolvemos un error, Mercado Pago
