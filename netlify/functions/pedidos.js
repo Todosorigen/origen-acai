@@ -3,17 +3,13 @@
 // para que puedas consultarlos y despacharlos. Protegida con una contraseña
 // simple para que solo tú puedas verla.
 
-const { getStore } = require('@netlify/blobs');
+const { getStore, connectLambda } = require('@netlify/blobs');
 
 exports.handler = async function (event) {
   try {
+    connectLambda(event);
     const clave = (event.queryStringParameters && event.queryStringParameters.clave) || '';
     const claveGuardada = process.env.ADMIN_PASSWORD || '';
-
-    // --- Diagnóstico temporal (se ve en el log de Netlify, no en el navegador) ---
-    console.log('DIAGNÓSTICO clave recibida, longitud:', clave.length);
-    console.log('DIAGNÓSTICO ADMIN_PASSWORD existe:', !!process.env.ADMIN_PASSWORD, '- longitud:', claveGuardada.length);
-    console.log('DIAGNÓSTICO ¿coinciden?:', clave === claveGuardada);
 
     // La contraseña se guarda como variable de entorno (ADMIN_PASSWORD),
     // igual que hicimos con el Access Token de Mercado Pago.

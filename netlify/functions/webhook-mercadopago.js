@@ -3,10 +3,11 @@
 // de un pago cambia. Cuando confirma que un pago quedó "approved" (aprobado),
 // sumamos esos kilos al contador real de la vaca.
 
-const { getStore } = require('@netlify/blobs');
+const { getStore, connectLambda } = require('@netlify/blobs');
 
 exports.handler = async function (event) {
   try {
+    connectLambda(event);
     // Mercado Pago manda el ID del pago por query string o dentro del body,
     // según el tipo de notificación (webhook nuevo vs. IPN clásico).
     const params = event.queryStringParameters || {};
