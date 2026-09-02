@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="es-CO">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Pedidos · Todos Origen</title>
+<style>
+  :root{
+    --verde:#14672F; --crema-2:#FFF1D8; --arena:#E8D5B7;
+    --naranja:#E69138; --teal:#004B53; --lima:#CBDFA4; --menta:#8ECDC0;
+    --gris:#6B6255; --linea:#E9DFCC; --tinta:#2A2118;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:'Raleway',Arial,sans-serif;background:var(--crema-2);color:var(--tinta)}
+  .wrap{max-width:900px;margin:0 auto;padding:28px 18px 60px}
+  h1{font-family:Georgia,serif;color:var(--verde);font-size:26px;margin:0 0 4px}
+  .sub{color:var(--gris);font-size:14px;margin:0 0 26px}
+
+  /* Pantalla de acceso */
+  .gate{max-width:360px;margin:80px auto;background:#fff;border:1px solid var(--linea);border-radius:14px;padding:28px;text-align:center}
+  .gate input{width:100%;padding:12px 14px;border:1px solid var(--linea);border-radius:9px;font-size:15px;margin:14px 0}
+  .gate button{width:100%;padding:12px;border:none;border-radius:9px;background:var(--naranja);color:#fff;font-weight:700;font-size:15px;cursor:pointer}
+  .gate button:hover{opacity:.92}
+  .gate p.err{color:#C0392B;font-size:13px;display:none}
+  .gate p.err.show{display:block}
+
+  /* Panel */
+  .stats{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:24px}
+  .stat{background:#fff;border:1px solid var(--linea);border-radius:12px;padding:14px 18px;min-width:130px}
+  .stat b{display:block;font-size:24px;color:var(--teal);font-family:Georgia,serif}
+  .stat span{font-size:12.5px;color:var(--gris)}
+
+  .card{background:#fff;border:1px solid var(--linea);border-radius:12px;padding:16px 18px;margin-bottom:12px}
+  .card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap}
+  .card-top b{font-size:16px}
+  .kilos-badge{background:rgba(230,145,56,.16);color:var(--naranja);font-weight:700;font-size:13px;padding:4px 10px;border-radius:999px;white-space:nowrap}
+  .card-row{margin-top:8px;font-size:14px;color:var(--tinta)}
+  .card-row b{color:var(--gris);font-weight:600;font-size:12.5px;text-transform:uppercase;letter-spacing:.03em;display:block;margin-bottom:2px}
+  .card-actions{margin-top:12px;display:flex;gap:8px;flex-wrap:wrap}
+  .card-actions a{font-size:13px;text-decoration:none;color:var(--teal);border:1px solid var(--linea);padding:6px 12px;border-radius:999px}
+  .card-actions a:hover{background:var(--crema-2)}
+  .empty{text-align:center;color:var(--gris);padding:40px 0}
+  .loading{text-align:center;color:var(--gris);padding:40px 0}
+</style>
+</head>
+<body>
+
+<div id="gate" class="gate">
+  <h1 style="font-size:20px">Panel de pedidos</h1>
+  <p class="sub" style="margin-bottom:0">Ingresa la clave para ver los pedidos</p>
+  <input type="password" id="clave" placeholder="Clave de acceso">
+  <button id="entrar">Entrar</button>
+  <p class="err" id="err">Clave incorrecta.</p>
+</div>
+
+<div class="wrap" id="panel" style="display:none">
+  <h1>Pedidos</h1>
+  <p class="sub">Lista de compras confirmadas, con dirección de entrega.</p>
+
+  <div class="stats">
+    <div class="stat"><b id="totalPedidos">0</b><span>pedidos</span></div>
+    <div class="stat"><b id="totalKilos">0</b><span>kilos vendidos</span></div>
+  </div>
+
+  <div id="lista" class="loading">Cargando pedidos…</div>
+</div>
+
+<script>
+(function(){
+  'use strict';
+  var clave = '';
+
+  function money(n){ return n ? '$' + Math.round(n).toLocaleString('es-CO') : ''; }
+  function fecha(iso){
+    try{
+      var d = new Date(iso);
+      return d.toLocaleString('es-CO', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' });
+    }catch(e){ return iso; }
+  }
+
+  function render(pedidos){
+    var lista = document.getElementById('lista');
+    if (!pedidos.length){
+      lista.className = 'empty';
+      lista.textContent = 'Todavía no hay pedidos registrados.';
+      return;
+    }
+    var totalKilos = 0;
+    var html = '';
+    pedidos.forEach(function(p){
+      totalKilos += (p.kilos || 0);
+      html += '<div class="card">'
+        + '<div class="card-top"><b>' + (p.nombre || 'Sin nombre') + '</b>'
+        + '<span class="kilos-badge">' + p.kilos + (p.kilos === 1 ? ' kilo' : ' kilos') + '</span></div>'
+        + '<div class="card-row"><b>Dirección</b>' + (p.direccion || '—') + '</div>'
+        + (p.nota ? '<div class="card-row"><b>Nota</b>' + p.nota + '</div>' : '')
+        + '<div class="card-row"><b>Teléfono</b>' + (p.telefono || '—') + '</div>'
+        + '<div class="card-row"><b>Fecha</b>' + fecha(p.fecha) + (p.total ? ' · ' + money(p.total) : '') + '</div>'
+        + '<div class="card-actions">'
+        + (p.telefono ? '<a href="https://wa.me/57' + p.telefono.replace(/\D/g,'') + '" target="_blank" rel="noopener">Escribir por WhatsApp</a>' : '')
+        + '</div>'
+        + '</div>';
+    });
+    document.getElementById('totalPedidos').textContent = pedidos.length;
+    document.getElementById('totalKilos').textContent = totalKilos;
+    lista.className = '';
+    lista.innerHTML = html;
+  }
+
+  function cargar(){
+    fetch('/.netlify/functions/pedidos?clave=' + encodeURIComponent(clave))
+      .then(function(res){
+        if (!res.ok) throw new Error('No autorizado');
+        return res.json();
+      })
+      .then(function(data){
+        document.getElementById('gate').style.display = 'none';
+        document.getElementById('panel').style.display = 'block';
+        render(data.pedidos || []);
+      })
+      .catch(function(){
+        document.getElementById('err').classList.add('show');
+      });
+  }
+
+  document.getElementById('entrar').addEventListener('click', function(){
+    clave = document.getElementById('clave').value.trim();
+    document.getElementById('err').classList.remove('show');
+    if (!clave) return;
+    cargar();
+  });
+  document.getElementById('clave').addEventListener('keydown', function(e){
+    if (e.key === 'Enter') document.getElementById('entrar').click();
+  });
+})();
+</script>
+</body>
+</html>
