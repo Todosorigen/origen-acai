@@ -378,20 +378,28 @@ footer{background:var(--teal-900);color:rgba(255,241,216,.62);padding:48px 0 28p
         <li><span class="dot" style="background:#CBDFA4"></span>
           <span class="bd-name">Pulpa de açaí<small>Va directo a la comunidad</small></span>
           <span class="bd-val" id="vPulpa">$23.000</span></li>
-        <li><span class="dot" style="background:#8ECDC0"></span>
-          <span class="bd-name">Transporte Buenaventura → Bogotá<small>Cadena de frío</small></span>
-          <span class="bd-val" id="vTrans">$5.000</span></li>
-        <li><span class="dot" style="background:#D4A96A"></span>
-          <span class="bd-name">Domicilio en Bogotá<small>Hasta tu puerta</small></span>
-          <span class="bd-val" id="vDom">$3.500</span></li>
         <li><span class="dot" style="background:#E69138"></span>
           <span class="bd-name">Comisión Origen (5%)<small>Nuestro único ingreso</small></span>
-          <span class="bd-val" id="vCom">$1.575</span></li>
+          <span class="bd-val" id="vComOrigen">$1.150</span></li>
+        <li><span class="dot" style="background:#8ECDC0"></span>
+          <span class="bd-name">Transporte Buenaventura → Bogotá<small>En cadena de frío</small></span>
+          <span class="bd-val" id="vTrans">$5.000</span></li>
+        <li id="rowDom"><span class="dot" style="background:#D4A96A"></span>
+          <span class="bd-name">Domicilio en Bogotá<small>Hasta la puerta de tu casa</small></span>
+          <span class="bd-val" id="vDom">$13.000</span></li>
+        <li id="rowAlist"><span class="dot" style="background:#D4A96A"></span>
+          <span class="bd-name">Alistamiento producto<small>Preparación y empaque</small></span>
+          <span class="bd-val" id="vAlist">$1.700</span></li>
+        <li id="rowAlmacen"><span class="dot" style="background:#D4A96A"></span>
+          <span class="bd-name">Costo por almacenamiento diario<small>Cadena de frío mientras se cierra la vaca</small></span>
+          <span class="bd-val" id="vAlmacen">$1.350</span></li>
+        <li><span class="dot" style="background:#004B53"></span>
+          <span class="bd-name">Comisión transferencia bancaria<small>3.29% + $800, cobrada por la pasarela de pago</small></span>
+          <span class="bd-val" id="vComTransf">$2.284</span></li>
       </ul>
 
       <div class="total-row"><span>Total que pagas</span><b id="vTotal">$33.075</b></div>
       <button class="btn btn-cta btn-lg" id="openModal">Comprar ahora</button>
-      <p class="calc-note">No se cobra nada hasta que se vendan los 400 kilos.</p>
     </div>
   </div>
 </section>
@@ -517,12 +525,14 @@ footer{background:var(--teal-900);color:rgba(255,241,216,.62);padding:48px 0 28p
   <div class="modal"><div class="modal-inner">
     <button class="modal-close" id="closeModal" aria-label="Cerrar">×</button>
     <h3>Confirma tu compra</h3>
-    <p class="sub">No se cobra nada hasta que se vendan los 400 kilos.</p>
     <div class="mini-summary">
       <div><span id="mKilos">1 kilo de pulpa</span><b id="mPulpa">$23.000</b></div>
+      <div><span>Comisión Origen (5%)</span><b id="mComOrigen">$1.150</b></div>
       <div><span>Transporte</span><b id="mTrans">$5.000</b></div>
-      <div><span>Domicilio en Bogotá</span><b id="mDom">$3.500</b></div>
-      <div><span>Comisión Origen (5%)</span><b id="mCom">$1.575</b></div>
+      <div id="mRowDom"><span>Domicilio en Bogotá</span><b id="mDom">$13.000</b></div>
+      <div id="mRowAlist"><span>Alistamiento producto</span><b id="mAlist">$1.700</b></div>
+      <div id="mRowAlmacen"><span>Almacenamiento diario</span><b id="mAlmacen">$1.350</b></div>
+      <div><span>Comisión transferencia (3.29% + $800)</span><b id="mComTransf">$2.284</b></div>
       <div class="tot"><span>Total</span><b id="mTotal">$33.075</b></div>
     </div>
     <div class="calc-label" style="color:var(--gris);text-align:left;margin-bottom:10px">Método de pago</div>
@@ -543,21 +553,39 @@ footer{background:var(--teal-900);color:rgba(255,241,216,.62);padding:48px 0 28p
 
   /* ---------- Parámetros de la vaca (editables) ---------- */
   var P = {
-    pulpa: 23000,
-    transporte: 5000,
-    domicilio: 3500,
-    comision: 0.05,
     metaKilos: 400,
     kilosVendidos: 0,     // ← actualizar
     personas: 0,          // ← actualizar
     diasRestantes: 12     // ← actualizar
   };
-  P.subtotal     = P.pulpa + P.transporte + P.domicilio;   // 31.500
-  P.comisionKilo = Math.round(P.subtotal * P.comision);    //  1.575
-  P.totalKilo    = P.subtotal + P.comisionKilo;            // 33.075
 
-  var money = function(n){ return '$' + n.toLocaleString('es-CO'); };
+  var money = function(n){ return '$' + Math.round(n).toLocaleString('es-CO'); };
   var $ = function(id){ return document.getElementById(id); };
+
+  /* ---------- Calculadora de precio por niveles ----------
+     Nivel 1 (1 a 9 kilos): incluye domicilio, alistamiento y almacenamiento.
+     Nivel 2 (10 kilos o más): esos 3 ítems se eliminan (se compra por lote grande). */
+  function calcularPrecio(kilos){
+    var pulpa          = 23000 * kilos;
+    var comisionOrigen = Math.round(pulpa * 0.05);
+    var transporte     = 5000 * kilos;
+
+    var esLoteGrande = kilos >= 10;
+    var domicilio     = esLoteGrande ? 0 : 13000;
+    var alistamiento   = esLoteGrande ? 0 : 1700;
+    var almacenamiento = esLoteGrande ? 0 : 1350;
+
+    var subtotal = pulpa + comisionOrigen + transporte + domicilio + alistamiento + almacenamiento;
+    var comisionTransferencia = Math.round(subtotal * 0.0329 + 800);
+    var total = subtotal + comisionTransferencia;
+
+    return {
+      pulpa: pulpa, comisionOrigen: comisionOrigen, transporte: transporte,
+      domicilio: domicilio, alistamiento: alistamiento, almacenamiento: almacenamiento,
+      comisionTransferencia: comisionTransferencia, total: total,
+      esLoteGrande: esLoteGrande
+    };
+  }
 
   /* ---------- Progreso ---------- */
   var pct = Math.min(100, Math.round(P.kilosVendidos / P.metaKilos * 100));
@@ -581,30 +609,44 @@ footer{background:var(--teal-900);color:rgba(255,241,216,.62);padding:48px 0 28p
   /* ---------- Calculadora ---------- */
   var kilos = 1;
   function render(){
-    var pulpa = P.pulpa * kilos, trans = P.transporte * kilos,
-        dom = P.domicilio * kilos, com = P.comisionKilo * kilos,
-        total = P.totalKilo * kilos;
+    var c = calcularPrecio(kilos);
 
     $('kiloNum').textContent  = kilos;
     $('kiloWord').textContent = (kilos === 1 ? 'kilo' : 'kilos') + ' de pulpa de açaí';
-    $('vPulpa').textContent = money(pulpa);
-    $('vTrans').textContent = money(trans);
-    $('vDom').textContent   = money(dom);
-    $('vCom').textContent   = money(com);
-    $('vTotal').textContent = money(total);
 
-    $('mKilos').textContent = kilos + (kilos === 1 ? ' kilo' : ' kilos') + ' de pulpa';
-    $('mPulpa').textContent = money(pulpa);
-    $('mTrans').textContent = money(trans);
-    $('mDom').textContent   = money(dom);
-    $('mCom').textContent   = money(com);
-    $('mTotal').textContent = money(total);
+    $('vPulpa').textContent     = money(c.pulpa);
+    $('vComOrigen').textContent = money(c.comisionOrigen);
+    $('vTrans').textContent     = money(c.transporte);
+    $('vDom').textContent       = money(c.domicilio);
+    $('vAlist').textContent     = money(c.alistamiento);
+    $('vAlmacen').textContent   = money(c.almacenamiento);
+    $('vComTransf').textContent = money(c.comisionTransferencia);
+    $('vTotal').textContent     = money(c.total);
+
+    $('mKilos').textContent     = kilos + (kilos === 1 ? ' kilo' : ' kilos') + ' de pulpa';
+    $('mPulpa').textContent     = money(c.pulpa);
+    $('mComOrigen').textContent = money(c.comisionOrigen);
+    $('mTrans').textContent     = money(c.transporte);
+    $('mDom').textContent       = money(c.domicilio);
+    $('mAlist').textContent     = money(c.alistamiento);
+    $('mAlmacen').textContent   = money(c.almacenamiento);
+    $('mComTransf').textContent = money(c.comisionTransferencia);
+    $('mTotal').textContent     = money(c.total);
+
+    // A partir de 10 kilos, domicilio/alistamiento/almacenamiento desaparecen
+    var mostrar = c.esLoteGrande ? 'none' : '';
+    $('rowDom').style.display     = mostrar;
+    $('rowAlist').style.display   = mostrar;
+    $('rowAlmacen').style.display = mostrar;
+    $('mRowDom').style.display     = mostrar;
+    $('mRowAlist').style.display   = mostrar;
+    $('mRowAlmacen').style.display = mostrar;
 
     $('minus').disabled = (kilos <= 1);
-    $('plus').disabled  = (kilos >= 20);
+    $('plus').disabled  = (kilos >= 400);
   }
   $('minus').addEventListener('click', function(){ if(kilos > 1){ kilos--; render(); } });
-  $('plus').addEventListener('click',  function(){ if(kilos < 20){ kilos++; render(); } });
+  $('plus').addEventListener('click',  function(){ if(kilos < 400){ kilos++; render(); } });
   render();
 
   /* ---------- Modal ---------- */
